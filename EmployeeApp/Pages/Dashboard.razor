@@ -1,0 +1,60 @@
+﻿@page "/dashboard"
+@inject HttpClient Http
+
+<h3 class="mb-4 text-primary">Dashboard</h3>
+
+@if (stats == null)
+{
+    <p><em>Loading dashboard data...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center p-3">
+                <h5>Total Employees</h5>
+                <h3>@stats.TotalEmployees</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center p-3">
+                <h5>Departments</h5>
+                <h3>@stats.Departments</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center p-3">
+                <h5>Average Salary</h5>
+                <h3>@stats.AverageSalary</h3>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardStats? stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var employees = await Http.GetFromJsonAsync<List<Employee>>("api/employees");
+        stats = new DashboardStats
+        {
+            TotalEmployees = employees?.Count ?? 0,
+            Departments = employees?.Select(e => e.Department).Distinct().Count() ?? 0,
+            AverageSalary = employees?.Any() == true ? employees.Average(e => e.Salary) : 0
+        };
+    }
+
+    public class DashboardStats
+    {
+        public int TotalEmployees { get; set; }
+        public int Departments { get; set; }
+        public decimal AverageSalary { get; set; }
+    }
+
+    public class Employee
+    {
+        public string? Department { get; set; }
+        public decimal Salary { get; set; }
+    }
+}

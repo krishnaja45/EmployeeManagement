@@ -1,0 +1,47 @@
+﻿<div class="top-row ps-3 navbar navbar-dark bg-dark shadow-sm">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+        <a class="navbar-brand fw-bold text-white" href="">EmployeeApp</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable bg-light border-end" style="min-height:100vh;">
+    <nav class="nav flex-column py-3">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link fw-semibold" href="" Match="NavLinkMatch.All">
+                <i class="bi bi-house-door-fill me-2"></i> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link fw-semibold" href="dashboard">
+                <i class="bi bi-bar-chart-line-fill me-2"></i> Dashboard
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link fw-semibold" href="employees">
+                <i class="bi bi-people-fill me-2"></i> Employees
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link fw-semibold" href="employee">
+                <i class="bi bi-person-plus-fill me-2"></i> Add Employee
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

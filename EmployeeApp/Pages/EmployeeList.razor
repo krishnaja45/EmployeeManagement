@@ -1,0 +1,201 @@
+﻿@page "/employees"
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+
+<h3>Employee List</h3>
+
+<ErrorBoundary>
+    <ChildContent>
+
+        <!-- Filters & Bulk Actions -->
+        <div class="filters d-flex align-items-center gap-2 flex-wrap mb-3">
+
+            <!-- Search Box -->
+            <input class="form-control form-control-sm search-input" placeholder="Search by Name, Dept or Place"
+                   @bind="searchTerm" @bind:event="oninput" style="width: 220px;" />
+
+            <!-- Status Filter -->
+            <select class="form-select form-select-sm status-filter" @bind="selectedStatus" style="width: 130px;">
+                <option value="All">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+
+            <!-- Department Filter -->
+            <select class="form-select form-select-sm department-filter" @bind="selectedDepartment" style="width: 150px;">
+                <option value="All">All Departments</option>
+                @foreach (var dept in allDepartments)
+                {
+                    <option value="@dept">@dept</option>
+                }
+            </select>
+
+            <button class="btn btn-danger btn-sm" @onclick="DeleteSelected" disabled="@(!SelectedEmployees.Any())">
+                Delete Selected
+            </button>
+
+            <button class="btn btn-primary btn-sm" @onclick="AddEmployee">Add Employee</button>
+        </div>
+
+        <!-- Quick Stats for filtered employees -->
+        <div class="fw-semibold text-secondary mb-3">
+            Total Employees: <span class="text-primary fw-bold">@FilteredEmployees.Count()</span> |
+            Active: <span class="text-success fw-bold">@FilteredEmployees.Count(e => e.IsActive)</span> |
+            Inactive: <span class="text-danger fw-bold">@FilteredEmployees.Count(e => !e.IsActive)</span>
+        </div>
+
+        @if (hasError)
+        {
+            <p class="text-danger"><em>Failed to load employees.</em></p>
+        }
+        else if (employees == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (!FilteredEmployees.Any())
+        {
+            <p><em>No employees found.</em></p>
+        }
+        else
+        {
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" @onchange="SelectAll" /></th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Place</th>
+                        <th>Salary</th>
+                        <th>Status</th>
+                        <th style="width: 180px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in FilteredEmployees)
+                    {
+                        <tr>
+                            <td>
+                                <input type="checkbox" checked="@emp.IsSelected"
+                                       @onchange="e => emp.IsSelected = (bool)e.Value!" />
+                            </td>
+                            <td>@emp.Name</td>
+                            <td>@emp.Department</td>
+                            <td>@emp.Place</td>
+                            <td>₹@emp.Salary.ToString("N0")</td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           checked="@emp.IsActive"
+                                           @onchange="async e => await ToggleStatus(emp)" />
+                                    <label class="form-check-label @(emp.IsActive ? "status-active" : "status-inactive")">
+                                        @(emp.IsActive ? "Active" : "Inactive")
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-info btn-sm me-2" @onclick="@(() => EditEmployee(emp.Id))">Edit</button>
+                                <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteEmployee(emp.Id))">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </ChildContent>
+    <ErrorContent>
+        <p class="text-danger"><em>Something went wrong while loading the Employee List page.</em></p>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private List<Employee>? employees;
+    private List<string> allDepartments = new();
+    private string searchTerm = "";
+    private string selectedStatus = "All";
+    private string selectedDepartment = "All";
+    private bool hasError = false;
+
+    private List<Employee> FilteredEmployees => employees?
+        .Where(e =>
+            (string.IsNullOrWhiteSpace(searchTerm)
+                || e.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || e.Place.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || e.Department.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            && (selectedStatus == "All" || (selectedStatus == "Active" && e.IsActive) || (selectedStatus == "Inactive" && !e.IsActive))
+            && (selectedDepartment == "All" || e.Department == selectedDepartment)
+        ).ToList() ?? new();
+
+    private List<Employee> SelectedEmployees => FilteredEmployees.Where(e => e.IsSelected).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+    }
+
+    private async Task LoadEmployees()
+    {
+        try
+        {
+            employees = await Http.GetFromJsonAsync<List<Employee>>("api/employees") ?? new List<Employee>();
+            allDepartments = employees
+                .Select(e => e.Department)
+                .Distinct()
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .ToList();
+            hasError = false;
+        }
+        catch
+        {
+            hasError = true;
+        }
+    }
+
+    private void AddEmployee() => NavManager.NavigateTo("/employee");
+    private void EditEmployee(int id) => NavManager.NavigateTo($"/employee/{id}");
+
+    private async Task DeleteEmployee(int id)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this employee?");
+        if (confirm)
+        {
+            await Http.DeleteAsync($"api/employees/{id}");
+            await LoadEmployees();
+        }
+    }
+
+    private async Task DeleteSelected()
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm", $"Delete {SelectedEmployees.Count} selected employees?");
+        if (confirm)
+        {
+            foreach (var emp in SelectedEmployees)
+                await Http.DeleteAsync($"api/employees/{emp.Id}");
+            await LoadEmployees();
+        }
+    }
+
+    private async Task ToggleStatus(Employee emp)
+    {
+        emp.IsActive = !emp.IsActive;
+        await Http.PutAsJsonAsync($"api/employees/{emp.Id}", emp);
+    }
+
+    private void SelectAll(ChangeEventArgs e)
+    {
+        bool isChecked = (bool)e.Value!;
+        foreach (var emp in FilteredEmployees)
+            emp.IsSelected = isChecked;
+    }
+
+    public class Employee
+    {
+        public int Id { get; set; } // internal only
+        public string Name { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Place { get; set; } = "";
+        public decimal Salary { get; set; }
+        public bool IsActive { get; set; } = true;
+        public bool IsSelected { get; set; }
+    }
+}

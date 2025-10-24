@@ -1,0 +1,102 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<PageTitle>Home</PageTitle>
+
+<ErrorBoundary>
+    <ChildContent>
+        <div class="dashboard-container">
+            <div class="hero-card">
+                <h1 class="hero-title">Welcome to the Employee Management System</h1>
+                <p class="hero-subtitle">
+                    Manage employees, departments, and performance all in one place — efficiently and effortlessly.
+                </p>
+                <button class="btn btn-light mt-3" @onclick="GoToEmployees">
+                    👥 Go to Employees
+                </button>
+            </div>
+
+            <div class="quick-stats">
+                <h4 class="stats-title">Quick Overview</h4>
+
+                @if (isLoading)
+                {
+                    <p><em>Loading stats...</em></p>
+                }
+                else if (hasError)
+                {
+                    <p class="text-danger"><em>Failed to load stats.</em></p>
+                }
+                else
+                {
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h5>Total Employees</h5>
+                            <h3>@totalEmployees</h3>
+                        </div>
+
+                        <div class="stat-card">
+                            <h5>Active Employees</h5>
+                            <h3 class="text-success">@activeEmployees</h3>
+                        </div>
+
+                        <div class="stat-card">
+                            <h5>Inactive Employees</h5>
+                            <h3 class="text-danger">@inactiveEmployees</h3>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </ChildContent>
+    <ErrorContent>
+        <p class="text-danger"><em>Something went wrong while loading the Home page.</em></p>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private int totalEmployees;
+    private int activeEmployees;
+    private int inactiveEmployees;
+    private bool isLoading = true;
+    private bool hasError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStats();
+    }
+
+    public async Task LoadStats()
+    {
+        isLoading = true;
+        hasError = false;
+
+        try
+        {
+            var employees = await Http.GetFromJsonAsync<List<Employee>>("api/employees");
+            if (employees != null)
+            {
+                totalEmployees = employees.Count;
+                activeEmployees = employees.Count(e => e.IsActive);
+                inactiveEmployees = employees.Count(e => !e.IsActive);
+            }
+        }
+        catch
+        {
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoToEmployees() => NavManager.NavigateTo("/employees");
+
+    public class Employee
+    {
+        public int Id { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

@@ -1,0 +1,101 @@
+﻿@page "/employee"
+@page "/employee/{Id:int}"
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<h3>@(employee.Id == 0 ? "Add Employee" : "Edit Employee")</h3>
+
+<EditForm Model="employee" OnValidSubmit="SaveEmployee">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="employee.Name" />
+        <ValidationMessage For="@(() => employee.Name)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Department</label>
+        <select class="form-select" @bind="employee.Department">
+            <option value="">-- Select Department --</option>
+            @foreach (var dept in Departments)
+            {
+                <option value="@dept">@dept</option>
+            }
+            <option value="__addnew__">Add New Department</option>
+        </select>
+        <ValidationMessage For="@(() => employee.Department)" />
+    </div>
+
+    @if (employee.Department == "__addnew__")
+    {
+        <div class="mb-3">
+            <label class="form-label">New Department</label>
+            <InputText class="form-control" @bind-Value="NewDepartment" />
+            <button type="button" class="btn btn-secondary mt-1" @onclick="AddNewDepartment">Add</button>
+        </div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Place</label>
+        <InputText class="form-control" @bind-Value="employee.Place" />
+        <ValidationMessage For="@(() => employee.Place)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Salary</label>
+        <InputNumber class="form-control" @bind-Value="employee.Salary" />
+        <ValidationMessage For="@(() => employee.Salary)" />
+    </div>
+
+    <button type="submit" class="btn btn-success me-2">Save</button>
+    <button type="button" class="btn btn-secondary" @onclick="BackToList">Back</button>
+</EditForm>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Employee employee = new();
+    private List<string> Departments = new() { "HR", "IT", "Sales", "Marketing" };
+    private string NewDepartment = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != 0)
+        {
+            employee = await Http.GetFromJsonAsync<Employee>($"api/employees/{Id}") ?? new Employee();
+        }
+    }
+
+    private void AddNewDepartment()
+    {
+        if (!string.IsNullOrWhiteSpace(NewDepartment) && !Departments.Contains(NewDepartment))
+        {
+            Departments.Add(NewDepartment);
+            employee.Department = NewDepartment;
+            NewDepartment = string.Empty;
+        }
+    }
+
+    private async Task SaveEmployee()
+    {
+        if (string.IsNullOrWhiteSpace(employee.Department) || string.IsNullOrWhiteSpace(employee.Name) || string.IsNullOrWhiteSpace(employee.Place))
+        {
+            // Optional: show a popup
+            await JS.InvokeVoidAsync("alert", "All fields are mandatory!");
+            return;
+        }
+
+        if (employee.Id == 0)
+            await Http.PostAsJsonAsync("api/employees", employee);
+        else
+            await Http.PutAsJsonAsync($"api/employees/{employee.Id}", employee);
+
+        NavManager.NavigateTo("/employees");
+    }
+
+    private void BackToList() => NavManager.NavigateTo("/employees");
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
+}

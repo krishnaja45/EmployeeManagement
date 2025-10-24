@@ -1,0 +1,67 @@
+﻿@page "/addemployee"
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<h3>Add Employee</h3>
+
+<EditForm Model="employee" OnValidSubmit="SaveEmployee">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="employee.Name" />
+        <ValidationMessage For="@(() => employee.Name)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Department</label>
+        <InputSelect class="form-select" @bind-Value="employee.Department" multiple>
+            @foreach (var dept in Departments)
+            {
+                <option value="@dept">@dept</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => employee.Department)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Place</label>
+        <InputText class="form-control" @bind-Value="employee.Place" />
+        <ValidationMessage For="@(() => employee.Place)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Salary</label>
+        <InputNumber class="form-control" @bind-Value="employee.Salary" />
+        <ValidationMessage For="@(() => employee.Salary)" />
+    </div>
+
+    <button type="submit" class="btn btn-success me-2">Add Employee</button>
+    <button type="button" class="btn btn-secondary" @onclick="BackToList">Cancel</button>
+</EditForm>
+
+@code {
+    private Employee employee = new();
+
+    private List<string> Departments = new() { "HR", "Finance", "Development", "Sales", "Support" };
+
+    private async Task SaveEmployee()
+    {
+        await Http.PostAsJsonAsync("api/employees", employee);
+        NavManager.NavigateTo("/employees");
+    }
+
+    private void BackToList()
+    {
+        NavManager.NavigateTo("/employees");
+    }
+
+    public class Employee
+    {
+        public string? Name { get; set; }
+        public string? Department { get; set; }
+        public string? Place { get; set; }
+        public decimal Salary { get; set; }
+    }
+}
