@@ -11,7 +11,7 @@ public partial class Employee
 
     public string Department { get; set; } = null!;
 
-    public string Place { get; set; } = null!;
+    public string Place { get; set; } 
 
     public decimal Salary { get; set; }
 
