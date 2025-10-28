@@ -77,7 +77,7 @@ namespace EmployeeAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
+            var employee = await _context.Employees.FindAsync1(id);
             if (employee == null)
             {
                 return NotFound();
